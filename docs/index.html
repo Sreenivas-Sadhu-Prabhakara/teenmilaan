@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teenmilaan — three-way match</title>
+<meta name="description" content="Teenmilaan checks what you ordered, what the invoice says, and what you counted — flagging quantity or rate mismatches at the counter. Small-shop three-way matching.">
+<style>
+  :root{--bg:#f5f2f8;--card:#fff;--ink:#1e1626;--muted:#5f5270;--brand:#6e4a8e;--brand-ink:#442c5c;--line:#e5dcee;--accent:#efe8f6}
+  @media (prefers-color-scheme:dark){:root{--bg:#130f18;--card:#1b1622;--ink:#ece4f3;--muted:#a596b6;--brand:#a07dc4;--brand-ink:#d6c6ea;--line:#282031;--accent:#1c1626}}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header{padding:64px 0 24px;text-align:center}
+  .eyebrow{color:var(--brand);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+  h1{font-size:44px;margin:.2em 0 .1em;letter-spacing:-.02em}
+  .tag{color:var(--muted);font-size:19px;max-width:640px;margin:8px auto 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:28px 0}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}h1{font-size:34px}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+  .card h2{margin:0 0 8px;font-size:20px}
+  input{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.row input{flex:1;min-width:70px}
+  button{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
+  .head{background:var(--accent);border-radius:12px;padding:14px;margin-bottom:12px;font-weight:800;color:var(--brand-ink)}
+  .m{display:flex;justify-content:space-between;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
+  .bad{color:#c0392b}.good{color:#1f8a4c}
+  footer{color:var(--muted);font-size:13px;text-align:center;padding:40px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Teenmilaan · तीन मिलान</div>
+    <h1>Ordered · invoiced · counted</h1>
+    <p class="tag">Verbal orders and trust delivery let shortages, substitutions and quiet price bumps
+      slip through. Teenmilaan matches the three at the counter and flags the gap.</p>
+  </header>
+  <div class="grid">
+    <div class="card">
+      <h2>Try it</h2>
+      <div class="head" id="head">0 mismatches · ₹0.00 at risk</div>
+      <div class="row"><input id="it" placeholder="Item"></div>
+      <div class="row">
+        <input id="iq" type="number" placeholder="Invoiced qty">
+        <input id="cq" type="number" placeholder="Counted qty">
+      </div>
+      <div class="row">
+        <input id="ir" type="number" placeholder="Invoiced rate">
+        <input id="ar" type="number" placeholder="Agreed rate">
+        <button onclick="add()">Check</button>
+      </div>
+      <div id="list"></div>
+    </div>
+    <div class="card">
+      <h2>Two-way works too</h2>
+      <p style="color:var(--muted)">The verbal order is easy to skip — so the core loop delivers full
+        value as a <b>2-way match</b> (invoice vs counted goods) even when the order was never logged.</p>
+      <p style="color:var(--muted)">Value at risk = short quantity at the agreed rate + the rate
+        overcharge on what you actually received.</p>
+      <p style="color:var(--muted);font-size:14px">Flutter → Go → PostgreSQL journal service.</p>
+    </div>
+  </div>
+  <footer>Teenmilaan · a local-first shopkeeper tool · offline, no account.</footer>
+</div>
+<script>
+  const rows=[]; const inr=v=>'₹'+(+v).toFixed(2);
+  function leak(m){ return (m.iq-m.cq)*m.ar + (m.ir-m.ar)*m.cq; }
+  function bad(m){ return Math.abs(m.iq-m.cq)>1e-9 || Math.abs(m.ir-m.ar)>1e-9; }
+  function render(){
+    const mis=rows.filter(bad); const total=mis.reduce((s,m)=>s+leak(m),0);
+    document.getElementById('head').textContent=`${mis.length} mismatch${mis.length===1?'':'es'} · ${inr(total)} at risk`;
+    document.getElementById('list').innerHTML=rows.map(m=>{
+      const b=bad(m);
+      return `<div class="m"><span>${m.it} — qty gap ${(m.iq-m.cq).toFixed(0)}, rate gap ${(m.ir-m.ar).toFixed(2)}</span>
+        <b class="${b?'bad':'good'}">${b?inr(leak(m)):'ok'}</b></div>`;
+    }).join('');
+  }
+  function add(){
+    const g=id=>+document.getElementById(id).value||0;
+    const it=document.getElementById('it').value.trim(); if(!it) return;
+    rows.unshift({it, iq:g('iq'), cq:g('cq'), ir:g('ir'), ar:g('ar')});
+    ['it','iq','cq','ir','ar'].forEach(id=>document.getElementById(id).value=''); render();
+  }
+  render();
+</script>
+</body>
+</html>
